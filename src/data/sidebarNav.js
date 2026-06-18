@@ -1,0 +1,65 @@
+export const sidebarNav = [
+  {
+    title: 'Construction',
+    path: '/construction',
+    description: 'Project work packages for residential, commercial, and industrial construction.',
+    items: [
+      { label: 'School', path: '/construction/school', description: 'School building construction packages and education facility works.' },
+      { label: 'Apartment', path: '/construction/apartment', description: 'Apartment building construction packages and deliveries.' },
+      { label: 'Commercial Building', path: '/construction/commercial-building', description: 'Commercial building structural and finish work.' },
+      { label: 'Industry', path: '/construction/industry', description: 'Industrial facility construction planning and execution.' },
+      { label: 'House', path: '/construction/house', description: 'Individual housing and small residential works.' },
+    ],
+  },
+  {
+    title: 'Civil Engineering',
+    path: '/civil-engineering',
+    description: 'Infrastructure and heavy civil engineering deliverables.',
+    items: [
+      { label: 'Road Work', path: '/civil-engineering/road-work', description: 'Pavement, grading and earthwork for road works.' },
+      { label: 'Bridge', path: '/civil-engineering/bridge', description: 'Bridge design, foundations, and structural checks.' },
+      { label: 'Drainage', path: '/civil-engineering/drainage', description: 'Stormwater and drainage design packages.' },
+      { label: 'Culvert', path: '/civil-engineering/culvert', description: 'Culvert sizing, layout and hydraulic coordination.' },
+      { label: 'Earth Work', path: '/civil-engineering/earth-work', description: 'Cut, fill and site preparation planning.' },
+      { label: 'Bank', path: '/civil-engineering/bank', description: 'Bank protection and retaining structure works.' },
+      { label: 'Excavation', path: '/civil-engineering/excavation', description: 'Excavation planning, safety and support works.' },
+    ],
+  },
+  {
+    title: 'A-Design',
+    path: '/architecture',
+    description: 'Architectural design services from concept to handover.',
+    items: [
+      { label: 'Building', path: '/architecture/building', description: 'Building design packages and architectural documentation.' },
+      { label: 'Floor Plan', path: '/architecture/floor-plan', description: 'Space planning and functional layout details.' },
+      { label: '3D Presentation', path: '/architecture/3d-presentation', description: 'Renderings and presentation-ready visualizations.' },
+      { label: 'Interior Design', path: '/architecture/interior-design', description: 'Interior finishes, joinery and furniture concepts.' },
+      { label: 'Landscape', path: '/architecture/landscape', description: 'Landscape and external works planning.' },
+    ],
+  },
+  {
+    title: 'Project Management',
+    path: '/project-management',
+    description: 'Cost, schedule, contract and site supervision control.',
+    items: [
+      { label: 'Estimation', path: '/project-management/estimation', description: 'Preliminary and detailed cost estimation workflows.' },
+      { label: 'BOQ', path: '/project-management/boq', description: 'Bill of quantities preparation and review.' },
+      { label: 'Cost Estimate', path: '/project-management/cost-estimate', description: 'Cost estimate tracking and comparison reports.' },
+      { label: 'Site Survey', path: '/project-management/site-survey', description: 'Survey coordination and as-built validation.' },
+      { label: 'Contract', path: '/project-management/contract', description: 'Contract administration and change order control.' },
+      { label: 'Administration', path: '/project-management/administration', description: 'Project administration and document workflows.' },
+      { label: 'Consultancy', path: '/project-management/consultancy', description: 'Technical consultancy and feasibility advisory.' },
+    ],
+  },
+  {
+    title: 'Specialized',
+    path: '/specialized',
+    description: 'Special purpose and fabrication workstreams.',
+    items: [
+      { label: 'Steel Structure Fabrication', path: '/specialized/steel-structure-fabrication', description: 'Fabrication and detailing for steel structures.' },
+      { label: 'General Work', path: '/specialized/general-work', description: 'General works and miscellaneous site packages.' },
+      { label: 'Roof Installation', path: '/specialized/roof-installation', description: 'Roof structure and cladding installation work.' },
+      { label: 'Plumbing Block Installation', path: '/specialized/plumbing-block-installation', description: 'Plumbing block infrastructure and installation scope.' },
+    ],
+  },
+]
