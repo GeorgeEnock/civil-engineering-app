@@ -1,7 +1,29 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import { Copy, Check } from 'lucide-react'
 
 export default function ProjectCard({ project, onEdit, onDelete, isOwner }) {
   const { title, location, category, photo_url, created_at } = project
+  const navigate = useNavigate()
+  const [copied, setCopied] = useState(false)
+
+  const shareUrl = `${window.location.origin}/projects?project=${project.id}`
+
+  const handleViewDetails = () => {
+    navigate(`/projects?project=${project.id}`)
+  }
+
+  const handleCopyLink = async (event) => {
+    event.stopPropagation()
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Clipboard API may be unavailable (e.g. insecure context); fail silently
+    }
+  }
 
   return (
     <motion.article
@@ -31,7 +53,33 @@ export default function ProjectCard({ project, onEdit, onDelete, isOwner }) {
           <span className="font-semibold text-slate-900">Posted</span>
           <span>{new Date(created_at).toLocaleDateString()}</span>
         </div>
-        <button className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-50 mb-2">
+
+        <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
+          <a
+            href={shareUrl}
+            onClick={(event) => {
+              event.preventDefault()
+              handleViewDetails()
+            }}
+            className="flex-1 truncate text-xs font-medium text-slate-600 hover:text-[#F59E0B]"
+            title={shareUrl}
+          >
+            {shareUrl}
+          </a>
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className="inline-flex shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white p-2 text-slate-500 transition hover:border-[#F59E0B] hover:text-[#F59E0B]"
+            aria-label="Copy share link"
+          >
+            {copied ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+          </button>
+        </div>
+
+        <button
+          onClick={handleViewDetails}
+          className="w-full rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-50 mb-2"
+        >
           View Details
         </button>
         {isOwner && (

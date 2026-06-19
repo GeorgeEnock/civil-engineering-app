@@ -124,8 +124,25 @@ export default function Projects() {
       if (!session || session.user.id !== editingProject?.user_id) {
         throw new Error('You are not authorized to delete this project.')
       }
-      const { error: dbError } = await supabase.from('projects').delete().eq('id', projectId)
+
+      // IMPORTANT: .delete() alone does not error if Row Level Security blocks
+      // the deletion - it just deletes 0 rows and returns success. Adding
+      // .select() lets us confirm a row was actually removed in the database.
+      const { data: deletedRows, error: dbError } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', projectId)
+        .select()
+
       if (dbError) throw dbError
+
+      if (!deletedRows || deletedRows.length === 0) {
+        throw new Error(
+          'Delete request was sent but no row was removed in the database. ' +
+          'This usually means a Row Level Security (RLS) DELETE policy is missing or misconfigured on the "projects" table.'
+        )
+      }
+
       navigate('/projects') // Redirect after deletion
     } catch (err) {
       setError(err.message)

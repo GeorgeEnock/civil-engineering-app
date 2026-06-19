@@ -9,6 +9,7 @@ export default function SectionDetail() {
   const navigate = useNavigate()
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
+  const [actionError, setActionError] = useState('')
 
   const group = sidebarNav.find((group) => group.path === `/${section}`)
   const detail = group?.items.find((entry) => entry.path === `/${section}/${item}`)
@@ -41,6 +42,7 @@ export default function SectionDetail() {
 
   const handleDeleteProject = async (projectId) => {
     if (!window.confirm('Are you sure you want to delete this project?')) return
+    setActionError('')
     setLoading(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -49,11 +51,29 @@ export default function SectionDetail() {
       if (!session || session.user.id !== projectToDelete?.user_id) {
         throw new Error('You are not authorized to delete this project.')
       }
-      const { error: dbError } = await supabase.from('projects').delete().eq('id', projectId)
+
+      // IMPORTANT: .delete() alone does not error if Row Level Security blocks
+      // the deletion - it just deletes 0 rows and returns success. Adding
+      // .select() lets us confirm a row was actually removed in the database.
+      const { data: deletedRows, error: dbError } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', projectId)
+        .select()
+
       if (dbError) throw dbError
-      setProjects(prev => prev.filter(p => p.id !== projectId)) // Optimistic update
+
+      if (!deletedRows || deletedRows.length === 0) {
+        throw new Error(
+          'Delete request was sent but no row was removed in the database. ' +
+          'This usually means a Row Level Security (RLS) DELETE policy is missing or misconfigured on the "projects" table.'
+        )
+      }
+
+      setProjects(prev => prev.filter(p => p.id !== projectId)) // Safe to update locally now
     } catch (err) {
       console.error('Error deleting project:', err.message)
+      setActionError(err.message)
     } finally {
       setLoading(false)
     }
@@ -92,6 +112,12 @@ export default function SectionDetail() {
           <h2 className="text-xl font-semibold text-white">Project Gallery</h2>
           <span className="text-sm text-slate-500">{projects.length} results</span>
         </div>
+
+        {actionError ? (
+          <div className="rounded-3xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+            {actionError}
+          </div>
+        ) : null}
 
         {loading ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

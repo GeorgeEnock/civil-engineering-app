@@ -3,4 +3,23 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+if (!supabaseUrl || !supabaseUrl.startsWith('http')) {
+  throw new Error('Invalid Supabase URL. Set VITE_SUPABASE_URL in your .env file to your Supabase project URL, e.g. https://your-project-ref.supabase.co')
+}
+
+if (!supabaseAnonKey || supabaseAnonKey.includes('your_supabase_anon_key')) {
+  throw new Error('Invalid Supabase anon key. Set VITE_SUPABASE_ANON_KEY in your .env file to your Supabase anon public key')
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    // Do not persist the session to localStorage/sessionStorage. This means
+    // the session only lives in memory for the current page load - closing
+    // the tab, refreshing the page, or reopening the app will always require
+    // signing in again with a password.
+    persistSession: false,
+    // No stored session means there is nothing to silently refresh in the
+    // background either.
+    autoRefreshToken: false,
+  },
+})

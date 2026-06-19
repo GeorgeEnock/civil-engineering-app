@@ -39,10 +39,64 @@ export default function Login() {
     setMessage('')
   }
 
+  function handlePasswordChangeFormChange(event) {
+    const { name, value } = event.target
+    setPasswordChangeForm((current) => ({ ...current, [name]: value }))
+    setError('')
+    setMessage('')
+  }
+
   async function handleSubmit(event) {
     event.preventDefault()
     const email = form.email.trim().toLowerCase()
     const password = form.password.trim()
+
+    if (changePasswordMode) {
+      const { currentPassword, newPassword, confirmPassword } = passwordChangeForm
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        setError('Please fill in all password fields.')
+        return
+      }
+      if (newPassword !== confirmPassword) {
+        setError('New password and confirmation do not match.')
+        return
+      }
+      if (newPassword.length < 6) {
+        setError('New password must be at least 6 characters.')
+        return
+      }
+
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user?.email) {
+        setError('You must be signed in to change your password.')
+        return
+      }
+
+      // Re-authenticate with the current password before allowing the change,
+      // so a previously logged-in session cannot be used to change the
+      // password without knowing the existing one.
+      const { error: reauthError } = await supabase.auth.signInWithPassword({
+        email: session.user.email,
+        password: currentPassword,
+      })
+      if (reauthError) {
+        setError('Current password is incorrect.')
+        return
+      }
+
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword })
+      if (updateError) {
+        setError(updateError.message)
+        return
+      }
+
+      setMessage('Password changed successfully. Please sign in again with your new password.')
+      setChangePasswordMode(false)
+      setMode('signin')
+      setPasswordChangeForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
+      await supabase.auth.signOut()
+      return
+    }
 
     if (forgotMode) {
       if (!email) {
@@ -62,6 +116,9 @@ export default function Login() {
 
     if (mode === 'signin') {
       setSigningIn(true)
+      const signInStart = Date.now()
+      const minimumSplashDuration = 5000 // 5 seconds
+
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
         if (error.message.toLowerCase().includes('email not confirmed')) {
@@ -72,6 +129,15 @@ export default function Login() {
         setSigningIn(false)
         return
       }
+
+      // Keep the "Welcome to CivilPro Engineering" splash visible for at
+      // least 5 seconds in total, even though sign-in itself finishes faster.
+      const elapsed = Date.now() - signInStart
+      const remaining = minimumSplashDuration - elapsed
+      if (remaining > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remaining))
+      }
+
       navigate('/')
     } else {
       const { error } = await supabase.auth.signUp({
@@ -184,7 +250,7 @@ export default function Login() {
                 {changePasswordMode
                   ? 'Update your password'
                   : forgotMode
-                  ? 'Reveal your account password'
+                  ? 'Reset your account password'
                   : mode === 'signin'
                   ? 'Access your account'
                   : 'Create a new account'}
@@ -254,7 +320,7 @@ export default function Login() {
                     name="currentPassword"
                     type="password"
                     value={passwordChangeForm.currentPassword}
-                    onChange={handleChange}
+                    onChange={handlePasswordChangeFormChange}
                     placeholder="Enter current password"
                     className="mt-2 w-full rounded-3xl border border-slate-700/90 bg-slate-900 px-4 py-3 text-sm text-white outline-none transition focus:border-[#F59E0B]"
                   />
@@ -265,7 +331,7 @@ export default function Login() {
                     name="newPassword"
                     type="password"
                     value={passwordChangeForm.newPassword}
-                    onChange={handleChange}
+                    onChange={handlePasswordChangeFormChange}
                     placeholder="Create a new password"
                     className="mt-2 w-full rounded-3xl border border-slate-700/90 bg-slate-900 px-4 py-3 text-sm text-white outline-none transition focus:border-[#F59E0B]"
                   />
@@ -276,7 +342,7 @@ export default function Login() {
                     name="confirmPassword"
                     type="password"
                     value={passwordChangeForm.confirmPassword}
-                    onChange={handleChange}
+                    onChange={handlePasswordChangeFormChange}
                     placeholder="Confirm new password"
                     className="mt-2 w-full rounded-3xl border border-slate-700/90 bg-slate-900 px-4 py-3 text-sm text-white outline-none transition focus:border-[#F59E0B]"
                   />
@@ -298,7 +364,7 @@ export default function Login() {
               {changePasswordMode
                 ? 'Change password'
                 : forgotMode
-                ? 'Reveal password'
+                ? 'Send reset link'
                 : mode === 'signin'
                 ? 'Sign In'
                 : 'Create Account'}
@@ -376,7 +442,7 @@ export default function Login() {
           </div>
 
           <p className="mt-8 text-xs uppercase tracking-[0.28em] text-slate-600">
-            Session data stays in your browser storage.
+            For your security, you'll need to sign in again each time you open the app.
           </p>
         </section>
       </div>
