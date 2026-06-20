@@ -8,20 +8,36 @@ const defaultForm = {
   password: '',
 }
 
+// A password-reset email link lands here with "type=recovery" in the URL.
+// Computed once, outside of any effect, so it can be used as a pure initial
+// value for useState below instead of calling setState synchronously inside
+// an effect (which React flags as an impure render side effect).
+function checkIsRecoveryLink() {
+  if (typeof window === 'undefined') return false
+  return window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery')
+}
+
 export default function Login() {
-  const [loading, setLoading] = useState(true)
+  const [isRecoveryFlow] = useState(checkIsRecoveryLink)
+  const [loading, setLoading] = useState(() => !checkIsRecoveryLink())
   const [mode, setMode] = useState('signin')
   const [form, setForm] = useState(defaultForm)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [forgotMode, setForgotMode] = useState(false)
-  const [changePasswordMode, setChangePasswordMode] = useState(false)
+  const [changePasswordMode, setChangePasswordMode] = useState(() => checkIsRecoveryLink())
   const [passwordChangeForm, setPasswordChangeForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
   const [signingIn, setSigningIn] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
+    // If this is a recovery link, the change-password form is already
+    // showing (set via the initial state above) - there's nothing left to
+    // do here, so skip the normal "is anyone already logged in" check
+    // entirely rather than letting it redirect away from the reset form.
+    if (isRecoveryFlow) return
+
     const checkUser = async () => {
       const { data } = await supabase.auth.getSession()
       if (data.session) navigate('/')
@@ -30,7 +46,7 @@ export default function Login() {
     checkUser()
     const timer = window.setTimeout(() => setLoading(false), 800)
     return () => window.clearTimeout(timer)
-  }, [navigate])
+  }, [navigate, isRecoveryFlow])
 
   function handleChange(event) {
     const { name, value } = event.target
@@ -53,8 +69,13 @@ export default function Login() {
 
     if (changePasswordMode) {
       const { currentPassword, newPassword, confirmPassword } = passwordChangeForm
-      if (!currentPassword || !newPassword || !confirmPassword) {
-        setError('Please fill in all password fields.')
+
+      if (!isRecoveryFlow && !currentPassword) {
+        setError('Please enter your current password.')
+        return
+      }
+      if (!newPassword || !confirmPassword) {
+        setError('Please fill in the new password fields.')
         return
       }
       if (newPassword !== confirmPassword) {
@@ -72,16 +93,21 @@ export default function Login() {
         return
       }
 
-      // Re-authenticate with the current password before allowing the change,
-      // so a previously logged-in session cannot be used to change the
-      // password without knowing the existing one.
-      const { error: reauthError } = await supabase.auth.signInWithPassword({
-        email: session.user.email,
-        password: currentPassword,
-      })
-      if (reauthError) {
-        setError('Current password is incorrect.')
-        return
+      // Skip re-authentication during a password-recovery flow (the whole
+      // point of "forgot password" is that the user doesn't know their old
+      // password). The temporary recovery session from the email link is
+      // already enough authorization to set a new one. Outside of recovery
+      // (e.g. changing password from a logged-in session), still require
+      // the current password to prevent a stale session being used alone.
+      if (!isRecoveryFlow) {
+        const { error: reauthError } = await supabase.auth.signInWithPassword({
+          email: session.user.email,
+          password: currentPassword,
+        })
+        if (reauthError) {
+          setError('Current password is incorrect.')
+          return
+        }
       }
 
       const { error: updateError } = await supabase.auth.updateUser({ password: newPassword })
@@ -95,6 +121,9 @@ export default function Login() {
       setMode('signin')
       setPasswordChangeForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
       await supabase.auth.signOut()
+      // Clear the recovery tokens out of the URL so refreshing the page
+      // doesn't trigger the recovery flow again.
+      window.history.replaceState(null, '', window.location.pathname)
       return
     }
 
@@ -249,11 +278,17 @@ export default function Login() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm uppercase tracking-[0.3em] text-slate-500">
-                {changePasswordMode ? 'Change Password' : forgotMode ? 'Password Recovery' : mode === 'signin' ? 'Sign In' : 'Register'}
+                {changePasswordMode
+                  ? isRecoveryFlow ? 'Password Recovery' : 'Change Password'
+                  : forgotMode
+                  ? 'Password Recovery'
+                  : mode === 'signin'
+                  ? 'Sign In'
+                  : 'Register'}
               </p>
               <h2 className="mt-2 text-2xl font-semibold text-white">
                 {changePasswordMode
-                  ? 'Update your password'
+                  ? isRecoveryFlow ? 'Set your new password' : 'Update your password'
                   : forgotMode
                   ? 'Reset your account password'
                   : mode === 'signin'
@@ -319,17 +354,19 @@ export default function Login() {
 
             {changePasswordMode ? (
               <>
-                <label className="block text-sm text-slate-300">
-                  Current password
-                  <input
-                    name="currentPassword"
-                    type="password"
-                    value={passwordChangeForm.currentPassword}
-                    onChange={handlePasswordChangeFormChange}
-                    placeholder="Enter current password"
-                    className="mt-2 w-full rounded-3xl border border-slate-700/90 bg-slate-900 px-4 py-3 text-sm text-white outline-none transition focus:border-[#F59E0B]"
-                  />
-                </label>
+                {!isRecoveryFlow ? (
+                  <label className="block text-sm text-slate-300">
+                    Current password
+                    <input
+                      name="currentPassword"
+                      type="password"
+                      value={passwordChangeForm.currentPassword}
+                      onChange={handlePasswordChangeFormChange}
+                      placeholder="Enter current password"
+                      className="mt-2 w-full rounded-3xl border border-slate-700/90 bg-slate-900 px-4 py-3 text-sm text-white outline-none transition focus:border-[#F59E0B]"
+                    />
+                  </label>
+                ) : null}
                 <label className="block text-sm text-slate-300">
                   New password
                   <input
