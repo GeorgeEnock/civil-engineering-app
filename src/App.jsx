@@ -58,14 +58,25 @@ function App() {
   if (!ready) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 text-white">
-        <div className="flex flex-col items-center gap-5 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-[#F59E0B] to-[#F97316] shadow-lg shadow-orange-500/30">
-            <span className="text-2xl font-black tracking-tight text-slate-950">CP</span>
+        <div className="flex flex-col items-center gap-6 text-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-linear-to-br from-[#F59E0B] to-[#F97316] shadow-xl shadow-orange-500/30">
+            <span className="text-3xl font-black tracking-tight text-slate-950">CP</span>
           </div>
-          <div className="h-1 w-40 overflow-hidden rounded-full bg-slate-800">
+
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              CivilPro <span className="text-[#F59E0B]">Engineering</span>
+            </h1>
+            <p className="text-xs uppercase tracking-[0.4em] text-slate-500">Project Management Platform</p>
+          </div>
+
+          <div className="h-1 w-48 overflow-hidden rounded-full bg-slate-800">
             <div className="h-full w-1/3 animate-[move-right_1.4s_ease-in-out_infinite] rounded-full bg-linear-to-r from-[#F59E0B] to-[#F97316]" />
           </div>
-          <p className="text-lg font-semibold uppercase tracking-[0.2em] text-slate-200 sm:text-xl">Developed by George from Tanzania</p>
+
+          <p className="text-base font-medium uppercase tracking-[0.18em] text-slate-300 sm:text-lg">
+            Developed by George from Tanzania
+          </p>
         </div>
       </div>
     )

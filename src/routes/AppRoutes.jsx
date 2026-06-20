@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabase.js'
 import MainLayout from '../layouts/MainLayout.jsx'
 import Dashboard from '../pages/Dashboard.jsx'
+import Feed from '../pages/Feed.jsx'
 import Projects from '../pages/Projects.jsx'
 import SectionLanding from '../pages/SectionLanding.jsx'
 import SectionDetail from '../pages/SectionDetail.jsx'
@@ -50,6 +51,7 @@ export default function AppRoutes() {
         }
       >
         <Route path="/" element={<Dashboard />} />
+        <Route path="/feed" element={<Feed />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/construction" element={<SectionLanding />} />
         <Route path="/civil-engineering" element={<SectionLanding />} />
