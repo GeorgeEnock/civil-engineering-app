@@ -18,7 +18,7 @@ function checkIsRecoveryLink() {
 }
 
 export default function Login() {
-  const [isRecoveryFlow] = useState(checkIsRecoveryLink)
+  const [isRecoveryFlow, setIsRecoveryFlow] = useState(checkIsRecoveryLink)
   const [loading, setLoading] = useState(() => !checkIsRecoveryLink())
   const [mode, setMode] = useState('signin')
   const [form, setForm] = useState(defaultForm)
@@ -26,17 +26,31 @@ export default function Login() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [forgotMode, setForgotMode] = useState(false)
-  const [changePasswordMode, setChangePasswordMode] = useState(() => checkIsRecoveryLink())
+  const [changePasswordMode, setChangePasswordMode] = useState(checkIsRecoveryLink)
   const [passwordChangeForm, setPasswordChangeForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
   const [signingIn, setSigningIn] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
-    // If this is a recovery link, the change-password form is already
-    // showing (set via the initial state above) - there's nothing left to
-    // do here, so skip the normal "is anyone already logged in" check
-    // entirely rather than letting it redirect away from the reset form.
-    if (isRecoveryFlow) return
+    // Different Supabase auth flow configurations (implicit vs PKCE) format
+    // the password-recovery URL differently, so manually checking for
+    // "type=recovery" in the URL isn't fully reliable. Supabase's client
+    // library fires a dedicated PASSWORD_RECOVERY event once it detects and
+    // processes the recovery link, regardless of the exact URL format -
+    // listening for that event directly is the robust way to catch it.
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecoveryFlow(true)
+        setChangePasswordMode(true)
+        setLoading(false)
+      }
+    })
+
+    if (isRecoveryFlow) {
+      // Already detected via the initial URL check above (loading already
+      // starts as false in that case) - nothing else to do here.
+      return () => authListener.subscription.unsubscribe()
+    }
 
     const checkUser = async () => {
       const { data } = await supabase.auth.getSession()
@@ -45,7 +59,11 @@ export default function Login() {
     }
     checkUser()
     const timer = window.setTimeout(() => setLoading(false), 800)
-    return () => window.clearTimeout(timer)
+
+    return () => {
+      window.clearTimeout(timer)
+      authListener.subscription.unsubscribe()
+    }
   }, [navigate, isRecoveryFlow])
 
   function handleChange(event) {
@@ -118,6 +136,7 @@ export default function Login() {
 
       setMessage('Password changed successfully. Please sign in again with your new password.')
       setChangePasswordMode(false)
+      setIsRecoveryFlow(false)
       setMode('signin')
       setPasswordChangeForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
       await supabase.auth.signOut()
@@ -171,7 +190,7 @@ export default function Login() {
 
       navigate('/')
     } else {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -188,7 +207,26 @@ export default function Login() {
         }
         return
       }
+
       setError('')
+
+      // If email confirmation is turned off in Supabase, signUp() returns an
+      // active session immediately - there's nothing to confirm, so log the
+      // new account straight into the app instead of telling them to check
+      // an email that will never need to arrive.
+      if (data.session) {
+        setSigningIn(true)
+        const signInStart = Date.now()
+        const minimumSplashDuration = 5000
+        const elapsed = Date.now() - signInStart
+        const remaining = minimumSplashDuration - elapsed
+        if (remaining > 0) {
+          await new Promise((resolve) => setTimeout(resolve, remaining))
+        }
+        navigate('/')
+        return
+      }
+
       setMessage('Account created! Please check your email and confirm your address before signing in.')
       setMode('signin')
     }

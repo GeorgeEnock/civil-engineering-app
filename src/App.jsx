@@ -11,30 +11,51 @@ function App() {
       const splashStart = Date.now()
       const minimumSplashDuration = 5000 // 5 seconds
 
-      // Belt-and-suspenders fix: even though the Supabase client is configured
-      // with persistSession: false, this forcibly destroys any session that
-      // could still be sitting around (e.g. leftover tokens written to
-      // localStorage/sessionStorage by an older build of this app, before
-      // persistSession: false was added, or by a cached/stale bundle).
-      // This guarantees every fresh app load truly starts logged out.
-      try {
-        await supabase.auth.signOut()
-      } catch {
-        // ignore - there may simply be nothing to sign out of
-      }
+      // A password-reset email link lands here with "type=recovery" in the
+      // URL. Supabase creates a temporary session from that link so the
+      // user can set a new password. If we forcibly sign out on every load
+      // (below), that recovery session gets destroyed before the user ever
+      // gets a chance to use it - so we must skip the forced sign-out in
+      // that one specific case.
+      // A password-reset (or signup confirmation) email link lands here
+      // with auth tokens in the URL, in one of several possible formats
+      // depending on the Supabase auth flow configuration (implicit vs
+      // PKCE). Checking broadly for any of these signals avoids forcibly
+      // signing out and destroying a session Supabase is about to set up
+      // from that link, before the page gets a chance to use it.
+      const url = window.location.hash + window.location.search
+      const looksLikeAuthLink =
+        url.includes('type=recovery') ||
+        url.includes('access_token') ||
+        url.includes('code=') ||
+        url.includes('token_hash')
 
-      // Manually sweep any leftover Supabase auth keys from both storages,
-      // in case an old session token is still sitting there unused.
-      try {
-        Object.keys(localStorage)
-          .filter((key) => key.startsWith('sb-'))
-          .forEach((key) => localStorage.removeItem(key))
+      if (!looksLikeAuthLink) {
+        // Belt-and-suspenders fix: even though the Supabase client is configured
+        // with persistSession: false, this forcibly destroys any session that
+        // could still be sitting around (e.g. leftover tokens written to
+        // localStorage/sessionStorage by an older build of this app, before
+        // persistSession: false was added, or by a cached/stale bundle).
+        // This guarantees every fresh app load truly starts logged out.
+        try {
+          await supabase.auth.signOut()
+        } catch {
+          // ignore - there may simply be nothing to sign out of
+        }
 
-        Object.keys(sessionStorage)
-          .filter((key) => key.startsWith('sb-'))
-          .forEach((key) => sessionStorage.removeItem(key))
-      } catch {
-        // ignore - storage may be unavailable in some environments
+        // Manually sweep any leftover Supabase auth keys from both storages,
+        // in case an old session token is still sitting there unused.
+        try {
+          Object.keys(localStorage)
+            .filter((key) => key.startsWith('sb-'))
+            .forEach((key) => localStorage.removeItem(key))
+
+          Object.keys(sessionStorage)
+            .filter((key) => key.startsWith('sb-'))
+            .forEach((key) => sessionStorage.removeItem(key))
+        } catch {
+          // ignore - storage may be unavailable in some environments
+        }
       }
 
       // Keep the splash screen (with the "Developed by George from Tanzania"
