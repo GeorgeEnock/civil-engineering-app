@@ -103,7 +103,9 @@ export default function Login() {
         setError('Please enter your email address.')
         return
       }
-      const { error } = await supabase.auth.resetPasswordForEmail(email)
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/login`,
+      })
       if (error) setError(error.message)
       else setMessage('Password reset link has been sent to your email.')
       return
@@ -143,7 +145,10 @@ export default function Login() {
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { display_name: form.username } }
+        options: {
+          data: { display_name: form.username },
+          emailRedirectTo: `${window.location.origin}/login`,
+        }
       })
 
       if (error) {
